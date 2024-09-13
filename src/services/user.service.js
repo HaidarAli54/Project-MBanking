@@ -6,6 +6,12 @@ const {
     verifyToken
  } = require('../middleware/jwt.config');
 
+ const {validateEmail, validateIndonesianPhoneNumber} = require('../../pkg/validation');
+ const { v4: uuidv4 } = require('uuid');
+ const sequelize = require("../../pkg/db");
+ 
+ 
+
 const userRepository = new UserRepository();
 
 class UserService {
@@ -13,30 +19,84 @@ class UserService {
         return await userRepository.findById(id);
     }
 
-    async create(user) {
-        const hashPassword = await bcrypt.hash(user.password, 10);
-        user.password = hashPassword;
+    async create(payload) {
+        const errorValidate = [];
 
-        const createdUser = await userRepository.create(user);
+        if(!payload.email && !payload.email === '') {
+            errorValidate.push('email is required');
+        }
 
-        let token = generateVerifyToken(createdUser.id);
+        if(!payload.fullname && !payload.fullname === '') {
+            errorValidate.push('fullname is required');
+        }
 
-        let mail = {
-            from: 'Haidar Ali <haidarali5464@gmail>',
-            to: user.email,
-            subject: 'pendaftaran akun untuk M-Banking',
-            text:         
-            "Hi, " +
-            user.username +
-            '. \n\r Silakan klik link berikut untuk menyelesaikan pendaftaran Anda. \n\r <a href="http://localhost:3000/api/v1/mail/verify/' +
-            token +
-            '">Link Daftar</a>',
+        if(!payload.password && !payload.password === '') {
+            errorValidate.push('password is required');
+        }
 
+        if(!payload.phone_number && !payload.phone_number === '') {
+            errorValidate.push('phone_number is required');
+        }
+
+        if(!validateEmail(payload.email)) {
+            errorValidate.push('email is not valid');
+        }
+
+        if(!validateIndonesianPhoneNumber(payload.phone_number)) {
+            errorValidate.push('phone_number is not valid');
+        }
+
+        if(errorValidate.length > 0) {
+            throw new Error(errorValidate);
+        }
+
+        const user = {
+            email: payload.email,
+            fullname: payload.fullname,
+            phone_number: payload.phone_number,
+            activation_token: uuidv4(),
+            is_verified: false
         };
 
-        const sendResult = sendEmail(mail);
+        const hashPassword = await bcrypt.hash(payload.password, 10);
+        user.password = hashPassword;
 
-        return sendResult;
+        const transaction = await sequelize.transaction();
+        try {
+            const userIsExist = await userRepository.findByEmail(user.email);
+            if(userIsExist) {
+                throw new Error('User already registered');
+            }
+            const createdUser = await userRepository.create(user);
+
+            let token = user.activation_token;
+
+            let mail = {
+                from: 'Haidar Ali <haidarali5464@gmail>',
+                to: user.email,
+                subject: 'pendaftaran akun untuk M-Banking',
+                text:         
+                "Hi, " +
+                user.fullname +
+                '. \n\r Silakan klik link berikut untuk menyelesaikan pendaftaran Anda. \n\r <a href="http://localhost:8080/user/verify/' +
+                token +
+                '">Link Daftar</a>',
+
+            };
+
+            sendEmail(mail);
+
+            await transaction.commit();
+
+            return;
+
+        } catch (error) {
+            transaction.rollback();
+            throw error;
+        }
+        
+
+        
     };
 
     async update(id, userUpdate) {

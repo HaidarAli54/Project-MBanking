@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-class TokenJwt {
+class Authentication {
     verifyToken(req, res, next) {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
@@ -20,4 +20,4 @@ class TokenJwt {
     }
 }
 
-module.exports = TokenJwt
+module.exports = Authentication

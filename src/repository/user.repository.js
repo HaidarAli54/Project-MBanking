@@ -15,6 +15,7 @@ class UserRepository {
 
     async create(user) {
         try {
+
             user.is_verified = false;
 
             const createdUser = await User.create(user, {

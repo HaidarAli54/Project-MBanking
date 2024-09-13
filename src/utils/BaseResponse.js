@@ -1,10 +1,9 @@
-class ResponseHelper {
-    constructor(res, statusCode, massage, data = null) {
-        res.status(statusCode).json({
-            massage,
-            data
-        })
+const responseHelper = (error, message, data = null) => {
+    return {
+        error: error,
+        message: message,
+        data: data
     }
 }
 
-module.exports = ResponseHelper
+module.exports = responseHelper
