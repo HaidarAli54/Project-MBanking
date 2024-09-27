@@ -12,7 +12,7 @@ router.post('/register', userController.create);
 
 router.post('/login', userController.login);
 
-router.get('/verify/:id', userController.verify);
+router.get('/verify/:token', userController.verify);
 
 router.patch('/update/:id', authentication.verifyToken, userController.update);
 

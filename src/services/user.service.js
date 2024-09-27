@@ -1,16 +1,11 @@
 const UserRepository = require('../repository/user.repository');
 const bcrypt = require('bcrypt');
 const sendEmail = require('../middleware/mail');
-const { 
-    generateVerifyToken,
-    verifyToken
- } = require('../middleware/jwt.config');
+const generateVerifyToken = require('../middleware/jwt.config');
 
- const {validateEmail, validateIndonesianPhoneNumber} = require('../../pkg/validation');
- const { v4: uuidv4 } = require('uuid');
- const sequelize = require("../../pkg/db");
- 
- 
+const {validateEmail, validateIndonesianPhoneNumber} = require('../../pkg/validation');
+const { v4: uuidv4 } = require('uuid');
+const sequelize = require("../../pkg/db");
 
 const userRepository = new UserRepository();
 
@@ -92,10 +87,10 @@ class UserService {
 
         } catch (error) {
             transaction.rollback();
+            console.log(error);
             throw error;
-        }
-        
 
+        }
         
     };
 
@@ -109,26 +104,52 @@ class UserService {
 
     async login (email, password) {
         const user = await userRepository.findByEmail(email);
+
         if (!user) {
             throw new Error('User not found');
         }
+
+        if (!user.is_verified) {
+            throw new Error('User not verified');
+        }
+        
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             throw new Error('Password incorrect');
         }
         
-        const token = generateVerifyToken(user.id);
+        const tokenData = {
+            id: user.id,
+            email: user.email,
+            fullname: user.fullname,
+            phone_number: user.phone_number
+        }
+        const token = generateVerifyToken(tokenData);
 
         return {token, user};
     }
 
-    async verify(id) {
-        const token = verifyToken(id);
+    async verify(token) {
 
-        const verify = await this.userRepository.verify(token);
-        
-        return verify
+        if (!token) {
+            throw new Error('Token not found');
+        }
+
+        const user = await userRepository.findByToken(token);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        console.log(user);
+
+        if (user.is_verified) {
+            throw new Error('User already verified');
+        }
+
+        await userRepository.update(user.id, {is_verified: true});
+
     }
+
 }
 
 module.exports = UserService

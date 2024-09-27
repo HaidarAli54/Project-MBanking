@@ -47,6 +47,12 @@ class UserRepository {
             where: {id},
         });
     }
+
+    async findByToken(token) {
+        return await User.findOne({
+            where: {activation_token: token}
+        });
+    }
 }
 
 module.exports = UserRepository
