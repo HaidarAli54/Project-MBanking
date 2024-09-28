@@ -29,7 +29,7 @@ class UserController {
             res.status(201).json(responseHelper(false, 'User created successfully', null));
 
         } catch (error) {
-            res.status(500).json(responseHelper(true, error.message, null));
+            res.status(500).json(responseHelper(true, 'user already exists', null));
         }
 
     }
